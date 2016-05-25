@@ -4,7 +4,7 @@
 	<modelVersion>4.0.0</modelVersion>
 	<groupId>de.florianmarsch</groupId>
 	<version>1.0-SNAPSHOT</version>
-	<artifactId>classic-kader-api</artifactId>
+	<artifactId>liveticker-system-api</artifactId>
 	<dependencies>
 		<dependency>
 			<groupId>com.sparkjava</groupId>
