@@ -90,30 +90,59 @@ public class Main {
 					"http://api.football-api.com/2.0/matches?from_date=01-01-1999&to_date=01-01-2099&comp_id=" + id
 							+ "&Authorization=" + System.getenv("apikey"));
 
-			Map<String, String> weeks = new TreeMap<>();
+			Map<Integer, String> weeks = new TreeMap<>();
 
 			try {
 				JSONArray matches = new JSONArray(content);
 				for (int i = 0; i < matches.length(); i++) {
 					JSONObject match = matches.getJSONObject(i);
-					String week = match.getString("week");
-					String status = match.getString("Status");
-					if (weeks.containsKey(week) ) {
-						if(!status.equals("FT")){
+					if (match.getString("week").isEmpty()) {
+						// Relegation
+						continue;
+					}
+
+					Integer week = Integer.valueOf(match.getString("week"));
+					String status = match.getString("status");
+					if (status.equals("FT")) {
+						status = "over";
+					} else if (status.equals("HT")) {
+						status = "running";
+					} else {
+						status = "coming";
+					}
+
+					if (weeks.containsKey(week)) {
+						if (status.equals("running") || weeks.get(week).equals("coming")) {
+							if(status.equals("over")){
+								status = "running";
+							}
 							weeks.put(week, status);
-						}	
+						}
 					} else {
 						weeks.put(week, status);
 					}
 				}
+
+				Integer current = 35;
+				for (Integer week : weeks.keySet()) {
+					String status = weeks.get(week);
+					if(status.equals("running") && week < current){
+						current = week;
+					}
+				}
 				
-				for (String week : weeks.keySet()) {
+				for (Integer week : weeks.keySet()) {
 					JSONObject value = new JSONObject();
 					value.put("week", week);
 					value.put("status", weeks.get(week));
-					data.put(value );
+					if(week == current){
+						value.put("current", Boolean.TRUE);
+					}else{
+						value.put("current", Boolean.FALSE);
+					}
+					data.put(value);
 				}
-				
+
 			} catch (Exception e) {
 				e.printStackTrace();
 			}
