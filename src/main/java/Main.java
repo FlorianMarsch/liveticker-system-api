@@ -9,8 +9,10 @@ import java.io.InputStream;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.text.Normalizer;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.TreeMap;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -78,8 +80,49 @@ public class Main {
 			attributes.put("data", data.toString());
 			return new ModelAndView(attributes, "json.ftl");
 		} , new FreeMarkerEngine());
-		
-		
+
+		get("/api/ligue/:id/weeks", (request, response) -> {
+
+			JSONArray data = new JSONArray();
+			String id = request.params(":id");
+
+			String content = loadFile(
+					"http://api.football-api.com/2.0/matches?from_date=01-01-1999&to_date=01-01-2099&comp_id=" + id
+							+ "&Authorization=" + System.getenv("apikey"));
+
+			Map<String, String> weeks = new TreeMap<>();
+
+			try {
+				JSONArray matches = new JSONArray(content);
+				for (int i = 0; i < matches.length(); i++) {
+					JSONObject match = matches.getJSONObject(i);
+					String week = match.getString("week");
+					String status = match.getString("Status");
+					if (weeks.containsKey(week) ) {
+						if(!status.equals("FT")){
+							weeks.put(week, status);
+						}	
+					} else {
+						weeks.put(week, status);
+					}
+				}
+				
+				for (String week : weeks.keySet()) {
+					JSONObject value = new JSONObject();
+					value.put("week", week);
+					value.put("status", weeks.get(week));
+					data.put(value );
+				}
+				
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
+
+			Map<String, Object> attributes = new HashMap<>();
+			attributes.put("data", data.toString());
+			return new ModelAndView(attributes, "json.ftl");
+		} , new FreeMarkerEngine());
+
 		get("/api/team/:id/squad", (request, response) -> {
 
 			JSONArray data = new JSONArray();
@@ -94,7 +137,7 @@ public class Main {
 					JSONObject player = squad.getJSONObject(i);
 					JSONObject returnPlayer = new JSONObject();
 
-					returnPlayer.put("name",normalize( player.getString("name")));
+					returnPlayer.put("name", normalize(player.getString("name")));
 					returnPlayer.put("id", player.getString("id"));
 					returnPlayer.put("position", player.getString("position"));
 					returnPlayer.put("injured", Boolean.valueOf(player.getString("injured")));
@@ -111,7 +154,7 @@ public class Main {
 			attributes.put("data", data.toString());
 			return new ModelAndView(attributes, "json.ftl");
 		} , new FreeMarkerEngine());
-			
+
 		get("/api/ligue/:id/events", (request, response) -> {
 
 			JSONArray data = new JSONArray();
@@ -157,7 +200,7 @@ public class Main {
 			attributes.put("data", data.toString());
 			return new ModelAndView(attributes, "json.ftl");
 		} , new FreeMarkerEngine());
-	
+
 	}
 
 	public String loadFile(String url) {
@@ -181,13 +224,13 @@ public class Main {
 		return tempReturn.toString();
 	}
 
-	public String normalize(String aString){
+	public String normalize(String aString) {
 		String norm = Normalizer.normalize(aString, Normalizer.Form.NFD);
 		norm = norm.replaceAll("[^\\p{ASCII}]", "");
-		if(norm.startsWith("[.] ")){
+		if (norm.startsWith("[.] ")) {
 			norm = norm.replaceAll("[.] ", "");
 		}
 		return norm;
 	}
-	
+
 }
