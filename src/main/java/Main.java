@@ -152,7 +152,7 @@ public class Main {
 			return new ModelAndView(attributes, "json.ftl");
 		} , new FreeMarkerEngine());
 
-		get("/api/team/:id/squad", (request, response) -> {
+		get("/api/ligue/:ligue/team/:id/squad", (request, response) -> {
 
 			JSONArray data = new JSONArray();
 			String id = request.params(":id");
