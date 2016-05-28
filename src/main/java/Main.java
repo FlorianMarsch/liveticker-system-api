@@ -113,7 +113,7 @@ public class Main {
 
 					if (weeks.containsKey(week)) {
 						if (status.equals("running") || weeks.get(week).equals("coming")) {
-							if(status.equals("over")){
+							if (status.equals("over")) {
 								status = "running";
 							}
 							weeks.put(week, status);
@@ -126,18 +126,18 @@ public class Main {
 				Integer current = 35;
 				for (Integer week : weeks.keySet()) {
 					String status = weeks.get(week);
-					if(status.equals("running") && week < current){
+					if (status.equals("running") && week < current) {
 						current = week;
 					}
 				}
-				
+
 				for (Integer week : weeks.keySet()) {
 					JSONObject value = new JSONObject();
 					value.put("week", week);
 					value.put("status", weeks.get(week));
-					if(week == current){
+					if (week == current) {
 						value.put("current", Boolean.TRUE);
-					}else{
+					} else {
 						value.put("current", Boolean.FALSE);
 					}
 					data.put(value);
@@ -184,10 +184,11 @@ public class Main {
 			return new ModelAndView(attributes, "json.ftl");
 		} , new FreeMarkerEngine());
 
-		get("/api/ligue/:id/events", (request, response) -> {
+		get("/api/ligue/:id/events/:week", (request, response) -> {
 
 			JSONArray data = new JSONArray();
 			String id = request.params(":id");
+			String week = request.params(":week");
 
 			String content = loadFile("http://api.football-api.com/2.0/matches?comp_id=" + id
 					+ "&from_date=01-01-1999&to_date=01-01-2099&Authorization=" + System.getenv("apikey"));
@@ -196,28 +197,40 @@ public class Main {
 				JSONArray root = new JSONArray(content);
 				for (int i = 0; i < root.length(); i++) {
 					JSONObject match = root.getJSONObject(i);
-					JSONArray events = match.getJSONArray("events");
-					for (int j = 0; j < events.length(); j++) {
-						JSONObject event = events.getJSONObject(j);
-						String type = event.getString("type");
-						if (type.equals("goal")) {
+					if (match.getString("week").equals(week)) {
+						JSONArray events = match.getJSONArray("events");
+						for (int j = 0; j < events.length(); j++) {
+							JSONObject event = events.getJSONObject(j);
+							String type = event.getString("type");
+							String home = event.getString("localteam_name");
+							String guest = event.getString("visitorteam_name");
+							if (type.equals("goal")) {
+								String result = event.getString("result").replace("[", "").replace("]", "").replace("-", ":");
 
-							JSONObject returnEvent = new JSONObject();
-							returnEvent.put("id", event.getString("id"));
-							String name = event.getString("player");
-							if (name.contains(" (pen.)")) {
-								name = name.replace(" (pen.)", "");
-								type = "penalty";
+								JSONObject returnEvent = new JSONObject();
+								String name = event.getString("player");
+								if (name.contains(" (pen.)")) {
+									name = name.replace(" (pen.)", "");
+									type = "penalty";
+								}
+								if (name.contains(" (o.g.)")) {
+									name = name.replace(" (o.g.)", "");
+									type = "own";
+								}
+								
+								String team = home;
+								if(!event.get("team").equals("visitorteam")){
+									team= guest;
+								}
+
+								returnEvent.put("id", event.getString("id"));
+								returnEvent.put("player", normalize(name));
+								returnEvent.put("type", type);
+								returnEvent.put("result", result);
+								returnEvent.put("team", team);
+
+								data.put(returnEvent);
 							}
-							if (name.contains(" (o.g.)")) {
-								name = name.replace(" (o.g.)", "");
-								type = "own";
-							}
-
-							returnEvent.put("player", normalize(name));
-							returnEvent.put("type", type);
-
-							data.put(returnEvent);
 						}
 					}
 				}
